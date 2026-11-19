@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Router Automation Dashboard</title>
+<style>
+  :root {
+    --page: #e7e3f6;
+    --frame: #26175f;
+    --bar: #26175f;
+    --card: #ffffff;
+    --ink: #1d1a2e;
+    --muted: #6b6784;
+    --line: #dcd8ec;
+    --accent: #5a3fd0;
+    --accent-dark: #452fa8;
+    --soft: #f4f2fc;
+    --term: #171335;
+    --term-ink: #ece9ff;
+    --ok: #1f9d68;
+    --bad: #d64545;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    line-height: 1.5;
+    padding: 24px 16px;
+  }
+
+  /* Window frame */
+  .app {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--soft);
+    border: 3px solid var(--frame);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .topbar {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--bar);
+    color: #fff;
+    padding: 12px 18px;
+  }
+  .dots { display: flex; gap: 6px; }
+  .dots span { width: 10px; height: 10px; border-radius: 50%; background: #8d80d6; }
+  .topbar h1 { flex: 1; margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: .01em; }
+  .menu { width: 18px; height: 14px; border-top: 2px solid #fff; border-bottom: 2px solid #fff; position: relative; }
+  .menu::after { content: ""; position: absolute; left: 0; right: 0; top: 4px; border-top: 2px solid #fff; }
+
+  .body {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 16px;
+    padding: 16px;
+    align-items: start;
+  }
+
+  /* Left card */
+  .side, .main {
+    background: var(--card);
+    border: 2px solid var(--frame);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .side { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 16px; }
+  .target { margin: 0; color: var(--muted); font-size: .9rem; }
+  .target code { display: block; font-family: Consolas, "SFMono-Regular", Menlo, monospace; color: var(--ink); font-size: 1.05rem; }
+
+  .run {
+    font: inherit; font-weight: 700;
+    width: 100%;
+    background: var(--accent); color: #fff;
+    border: 0; border-radius: 8px;
+    padding: 12px 20px; cursor: pointer;
+    transition: background .15s;
+  }
+  .run:hover { background: var(--accent-dark); }
+  .run:disabled { background: #9b8ee0; cursor: progress; }
+  .run:focus-visible, .copy:focus-visible, summary:focus-visible, .jump a:focus-visible {
+    outline: 3px solid #b7a9f5; outline-offset: 2px;
+  }
+
+  .chip { display: inline-block; font-size: .85rem; font-weight: 600; padding: 4px 12px; border-radius: 999px; color: #fff; }
+  .chip.ok { background: var(--ok); }
+  .chip.bad { background: var(--bad); }
+
+  .jump { display: flex; flex-direction: column; gap: 2px; }
+  .jump p { margin: 0 0 4px; color: var(--muted); font-size: .85rem; }
+  .jump a {
+    color: var(--ink); text-decoration: none;
+    padding: 6px 10px; border-radius: 6px;
+    font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: .86rem;
+    word-break: break-word;
+  }
+  .jump a:hover { background: var(--soft); color: var(--accent-dark); }
+
+  /* Right card */
+  h2 { font-size: 1.25rem; margin: 0 0 16px; }
+
+  .empty {
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    padding: 28px;
+    color: var(--muted);
+  }
+  .error {
+    background: #fbe4e2;
+    border-left: 5px solid var(--bad);
+    border-radius: 8px;
+    padding: 14px 18px;
+    color: #8f1d17;
+    font-family: Consolas, Menlo, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .block {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 18px;
+    overflow: hidden;
+    scroll-margin-top: 16px;
+  }
+  .block summary {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    background: var(--soft);
+    cursor: pointer;
+    list-style: none;
+  }
+  .block summary::-webkit-details-marker { display: none; }
+  .block summary::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-right: 2px solid var(--muted);
+    border-bottom: 2px solid var(--muted);
+    transform: rotate(-45deg);
+    transition: transform .15s;
+  }
+  .block[open] summary::before { transform: rotate(45deg); }
+  .cmd {
+    font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+    font-weight: 600;
+    flex: 1;
+    word-break: break-word;
+  }
+  .meta { color: var(--muted); font-size: .85rem; white-space: nowrap; }
+  .copy {
+    font: inherit; font-size: .85rem;
+    background: #fff; color: var(--accent-dark);
+    border: 1px solid var(--line); border-radius: 6px;
+    padding: 3px 12px; cursor: pointer;
+  }
+  .copy:hover { background: #e8e3fa; }
+
+  pre {
+    margin: 0;
+    padding: 16px 20px;
+    background: var(--term);
+    color: var(--term-ink);
+    font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+    font-size: .86rem;
+    line-height: 1.45;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  @media (max-width: 800px) {
+    .body { grid-template-columns: 1fr; }
+    .side { position: static; }
+    .meta { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+    <h1>Router Automation Dashboard</h1>
+    <div class="menu" aria-hidden="true"></div>
+  </div>
+
+  <div class="body">
+
+    <aside class="side">
+      <p class="target">Target<code>{{ target or '192.168.10.25:32770' }}</code>(Telnet)</p>
+
+      <form method="POST" id="run-form">
+        <button type="submit" class="run" id="run-btn">Run Diagnostics</button>
+      </form>
+
+      <div id="status" hidden>
+        {% if error %}
+          <span class="chip bad">Connection failed</span>
+        {% elif results %}
+          <span class="chip ok">Completed: {{ results|length }} command{{ '' if results|length == 1 else 's' }}</span>
+        {% endif %}
+      </div>
+
+      <nav class="jump" id="jump" hidden aria-label="Jump to command">
+        {% if results and not error %}
+          <p>Jump to</p>
+          {% for cmd in results %}<a href="#cmd-{{ loop.index }}">{{ cmd }}</a>{% endfor %}
+        {% endif %}
+      </nav>
+    </aside>
+
+    <main class="main" aria-live="polite">
+      <h2>Execution Results</h2>
+
+      <div class="empty" id="idle">No results yet. Select Run Diagnostics to connect to the router and run the commands.</div>
+
+      <div id="output" hidden>
+        {% if error %}
+          <div class="error">{{ error }}</div>
+
+        {% elif results %}
+          {% for cmd, output in results.items() %}
+            <details class="block" id="cmd-{{ loop.index }}" open>
+              <summary>
+                <span class="cmd">Command: {{ cmd }}</span>
+                <span class="meta">{{ output.splitlines()|length }} lines</span>
+                <button type="button" class="copy">Copy</button>
+              </summary>
+              <pre>{{ output }}</pre>
+            </details>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+  // Results stay hidden until the Run Diagnostics button has been pressed.
+  var ran = sessionStorage.getItem('diagnosticsRan') === '1';
+  sessionStorage.removeItem('diagnosticsRan');
+
+  var output = document.getElementById('output');
+  if (ran && output.children.length) {
+    output.hidden = false;
+    document.getElementById('status').hidden = false;
+    document.getElementById('jump').hidden = false;
+    document.getElementById('idle').hidden = true;
+  }
+
+  document.getElementById('run-form').addEventListener('submit', function () {
+    sessionStorage.setItem('diagnosticsRan', '1');
+    var b = document.getElementById('run-btn');
+    b.disabled = true;
+    b.textContent = 'Running...';
+  });
+
+  document.querySelectorAll('.copy').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var text = btn.closest('details').querySelector('pre').innerText;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = 'Copied';
+          setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+        });
+      }
+    });
+  });
+</script>
+</body>
+</html>
